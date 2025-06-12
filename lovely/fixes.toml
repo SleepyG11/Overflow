@@ -63,10 +63,10 @@ if to_big(amt or 1) <= to_big(1) then
 else
     local num = amt
     if Overflow.bulk_use_caps[e.config.ref_table.config.center.key] then
-        num = Overflow.bulk_use_caps[e.config.ref_table.config.center.key](num)
+        num = Overflow.bulk_use_caps[e.config.ref_table.config.center.key](e.config.ref_table, e.config.ref_table.area, nil, num)
     end
     if e.config.ref_table.config.center.bulk_use_cap then
-        num = e.config.ref_table.config.center:bulk_use_cap(num)
+        num = e.config.ref_table.config.center:bulk_use_cap(e.config.ref_table, e.config.ref_table.area, nil, num)
     end
     Overflow.bulk_use(e.config.ref_table, area, num)
     if to_big(amt) - to_big(num) > to_big(0) then

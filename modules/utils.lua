@@ -5,6 +5,7 @@ function Overflow.TableMatches(table, func)
 end
 
 function Overflow.bulk_use(card, area, amount)
+    if to_big(amount) <= to_big(1) then return end
     if card.config.center.bulk_use then
         card.config.center:bulk_use(card, area, nil, amount)
     end

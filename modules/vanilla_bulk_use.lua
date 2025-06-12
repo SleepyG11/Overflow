@@ -53,6 +53,41 @@ Overflow.bulk_use_functions = {
         delay(0.6)
     end
 }
+
+Overflow.bulk_use_caps = Overflow.bulk_use_caps or {}
+Overflow.table_merge(Overflow.bulk_use_caps, {
+    c_judgement = function(self, area, _, amount)
+        return math.max(0, math.min(amount, G.jokers.config.card_limit - #G.jokers.cards))
+    end,
+
+    c_wraith = function(self, area, _, amount)
+        return math.max(0, math.min(amount, G.jokers.config.card_limit - #G.jokers.cards))
+    end,
+    c_soul = function(self, area, _, amount)
+        return math.max(0, math.min(amount, G.jokers.config.card_limit - #G.jokers.cards))
+    end,
+    c_ectoplasm = function(self, area, _, amount)
+        return math.max(0, math.min(amount, #self.eligible_editionless_jokers))
+    end,
+    c_hex = function(self, area, _, amount)
+        local editionless_eternal_jokers = 0
+        for i, card in ipairs(self.eligible_editionless_jokers) do
+            if card.ability and card.ability.eternal then editionless_eternal_jokers = editionless_eternal_jokers + 1 end
+        end
+        return math.max(0, math.min(amount, editionless_eternal_jokers))
+    end,
+    c_ankh = function(self, area, _, amount)
+        local has_eternal = false
+        for i, card in ipairs(G.jokers.cards) do
+            if card.ability and card.ability.eternal then has_eternal = true break end
+        end
+        return math.max(0, math.min(amount, has_eternal and amount or 1))
+    end,
+    c_immolate = function(self, area, _, amount)
+        return math.max(0, math.min(amount, math.ceil(#G.hand.cards / self.ability.extra.destroy)))
+    end,
+})
+
 local init_prototypesref = Game.init_item_prototypes
 function Game:init_item_prototypes()
     init_prototypesref(self)
