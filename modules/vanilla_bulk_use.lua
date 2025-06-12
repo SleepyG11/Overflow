@@ -27,18 +27,28 @@ Overflow.bulk_use_functions = {
     c_temperance = function(self, _, _, amount)
         G.E_MANAGER:add_event(Event({trigger = 'after', delay = 0.4, func = function()
             play_sound('timpani')
-            used_tarot:juice_up(0.3, 0.5)
+            self:juice_up(0.3, 0.5)
             ease_dollars(self.ability.money * (amount or 1), true)
             return true end }))
         delay(0.6)
     end,
     c_hermit = function(self, _, _, amount)
-        local num = 1
-        num = num * to_big(2) ^ to_big(amount)
+        local cap = to_big(self.ability.extra)
+        local new_money = to_big(G.GAME.dollars)
+        local multi_amount = to_big(amount)
+        local diff = to_big(0)
+        if new_money > to_big(0) then
+            while new_money < cap and multi_amount > 0 do
+                new_money = new_money * 2
+                multi_amount = multi_amount - 1
+            end
+            new_money = new_money + cap * multi_amount
+            diff = new_money - G.GAME.dollars
+        end
         G.E_MANAGER:add_event(Event({trigger = 'after', delay = 0.4, func = function()
             play_sound('timpani')
-            used_tarot:juice_up(0.3, 0.5)
-            ease_dollars(math.max(0,math.min(G.GAME.dollars*num, self.ability.extra*num)), true)
+            self:juice_up(0.3, 0.5)
+            ease_dollars(diff, true)
             return true end }))
         delay(0.6)
     end
