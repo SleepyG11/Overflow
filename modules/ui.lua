@@ -92,7 +92,7 @@ function Card:highlight(is_highlighted)
                 }
             }
         end
-        if Overflow.mass_use_sets[self.config.center.set] and self.area and Overflow.can_mass_use(self.config.center.set, self.area.cards) then
+        if Overflow.mass_use_sets[self.config.center.set] and self.area and Overflow.can_mass_use(self.config.center.set, self.area.cards) and G.FUNCS.can_mass_use({config = {ref_table = self}}) then
             self.children.mass_use = UIBox {
                 definition = {
                     n = G.UIT.ROOT,
@@ -289,7 +289,7 @@ function Card:highlight(is_highlighted)
         end
     else  
         local y = 0.3
-        if is_highlighted and Overflow.mass_use_sets[self.config.center.set] and self.area and Overflow.can_mass_use(self.config.center.set, self.area.cards) then
+        if is_highlighted and Overflow.mass_use_sets[self.config.center.set] and self.area and Overflow.can_mass_use(self.config.center.set, self.area.cards) and G.FUNCS.can_mass_use({config = {ref_table = self}}) then
             self.children.mass_use = UIBox {
                 definition = {
                     n = G.UIT.ROOT,
@@ -599,11 +599,17 @@ G.FUNCS.can_mass_use = function(e)
     if card.area == G.hand or card.area == G.consumeables then
         e.config.colour = G.C.SECONDARY_SET[card.config.center.set]
         e.config.button = 'mass_use'
-        e.states.visible = true
+        if e.states then
+            e.states.visible = true
+        end
+        return true
     else
         e.config.colour = G.C.UI.BACKGROUND_INACTIVE
         e.config.button = nil
-        e.states.visible = false
+        if e.states then
+            e.states.visible = false
+        end
+        return nil
     end
 end
 
@@ -653,7 +659,7 @@ Overflow.overflowConfigTab = function()
 	config = { n = G.UIT.R, config = { align = "tm", padding = 0 }, nodes = { left_settings, right_settings } }
 	ovrf_nodes[#ovrf_nodes + 1] = config
 	ovrf_nodes[#ovrf_nodes + 1] = create_toggle({
-		label = localize("k_only_stack_negatives"),
+		label = MP and localize("k_only_stack_negatives_mp") or localize("k_only_stack_negatives"),
 		active_colour = HEX("40c76d"),
 		ref_table = Overflow.config,
 		ref_value = "only_stack_negatives",
@@ -662,13 +668,22 @@ Overflow.overflowConfigTab = function()
         end,
 	})
     ovrf_nodes[#ovrf_nodes + 1] = create_toggle({
-		label = localize("k_fix_slots"),
+		label = MP and localize("k_fix_slots_mp") or localize("k_fix_slots"),
 		active_colour = HEX("40c76d"),
 		ref_table = Overflow.config,
 		ref_value = "fix_slots",
 		callback = function()
             Overflow.save_config()
         end,
+	})
+
+    ovrf_nodes[#ovrf_nodes + 1] = create_option_cycle({
+		label = localize("sorting_mode"),
+		scale = 0.8,
+		w = 8,
+		options = {localize("sorting_default"), localize("sorting_lh"), localize("sorting_ch"), localize("sorting_mh"), localize("sorting_sh"), localize("sorting_ph"), localize("sorting_ll"), localize("sorting_cl"), localize("sorting_ml"), localize("sorting_sl"), localize("sorting_pl")},
+		opt_callback = "update_sorting_mode",
+		current_option = Overflow.config.sorting_mode,
 	})
 	return {
 		n = G.UIT.ROOT,
@@ -693,26 +708,30 @@ if not SMODS then
                     n = G.UIT.R,
                     nodes = {
                         create_toggle({
-                            label = localize("k_only_stack_negatives"),
+                            label = MP and localize("k_only_stack_negatives_mp") or localize("k_only_stack_negatives"),
                             active_colour = HEX("40c76d"),
                             ref_table = Overflow.config,
                             ref_value = "only_stack_negatives",
                             callback = function()
-                                if not SMODS then
-                                    Overflow.save_config()
-                                end
+                                Overflow.save_config()
                             end,
                         }),
                         create_toggle({
-                            label = localize("k_fix_slots"),
+                            label = MP and localize("k_fix_slots_mp") or localize("k_fix_slots"),
                             active_colour = HEX("40c76d"),
                             ref_table = Overflow.config,
                             ref_value = "fix_slots",
                             callback = function()
-                                if not SMODS then
-                                    Overflow.save_config()
-                                end
+                                Overflow.save_config()
                             end,
+                        }),
+                        create_option_cycle({
+                            label = localize("sorting_mode"),
+                            scale = 0.8,
+                            w = 8,
+                            options = {localize("sorting_default"), localize("sorting_lh"), localize("sorting_ph"), localize("sorting_ll"), localize("sorting_pl")},
+                            opt_callback = "update_sorting_mode",
+                            current_option = Overflow.config.sorting_mode,
                         })
                     }
                 }
@@ -742,3 +761,7 @@ if not SMODS then
     end
 end
 
+G.FUNCS.update_sorting_mode = function(e)
+	Overflow.config.sorting_mode = e.to_key
+    Overflow.save_config()
+end

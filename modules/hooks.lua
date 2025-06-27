@@ -9,7 +9,7 @@ function CardArea:emplace(card, ...)
         end
     else
         if not card.ability.immutable then card.ability.immutable = {} end
-        if Overflow.config.only_stack_negatives then
+        if Overflow.config.only_stack_negatives or (MP and MP.LOBBY and MP.LOBBY.code) then
             if not card.edition or not card.edition.negative then
                 emplace_ref(self, card, ...)
             else
@@ -50,7 +50,7 @@ function Card:set_edition(edition, ...)
         set_editionref(self, edition, ...)
     else
         if not self.ability.immutable then self.ability.immutable = {} end
-        if Overflow.config.only_stack_negatives then
+        if Overflow.config.only_stack_negatives or (MP and MP.LOBBY and MP.LOBBY.code) then
             if (type(edition) == "string" and edition ~= "e_negative") or (type(edition) == "table" and not edition.negative) then
                 set_editionref(self, edition, ...)
             else    
@@ -120,6 +120,7 @@ G.FUNCS.use_card = function(e, mute, nosave)
         else
             G.GAME.modifiers.entr_twisted = mod
             card.ability.bypass_aleph = true
+            if not card.ability.immutable then card.ability.immutable = {} end
             local amount = card.ability.immutable.overflow_amount
             use_cardref(e, mute, nosave)
             G.E_MANAGER:add_event(Event({
@@ -208,11 +209,14 @@ function copy_card(other, new_card, card_scale, playing_card, strip_edition, don
 end
 
 local set_cost_ref = Card.set_cost
-function Card:set_cost()
-	set_cost_ref(self)
+function Card:set_cost(...)
+	local cost = set_cost_ref(self, ...)
     if not self.ability.immutable then self.ability.immutable = {} end
-	self.sell_cost = math.max(self.sell_cost * (self.ability.immutable.overflow_amount or 1), 0)
-    self.sell_cost_label = self.facing == 'back' and '?' or number_format(self.sell_cost)
+    if self.ability.immutable.overflow_amount and self.ability.immutable.overflow_amount > 0 then
+	    self.sell_cost = math.max(self.sell_cost * (self.ability.immutable.overflow_amount or 1), 0)
+        self.sell_cost_label = self.facing == 'back' and '?' or number_format(self.sell_cost)
+    end
+    return cost
 end
 
 local card_load_ref = Card.load
@@ -253,4 +257,45 @@ if not SMODS then
         end
         return init_localization_ref(...)
     end
+end
+
+if not SMODS then
+    function create_UIBox_current_hands(simple)
+
+    local hands = {
+
+    }
+    for i, v in pairs(G.handlist) do
+        hands[#hands+1] = v
+    end
+    if Overflow.config.sorting_mode ~= 1 then
+        hands = Overflow.sort(hands, true)
+    end
+    for i, v in pairs(hands) do
+        hands[i] = create_UIBox_current_hand_row(v, simple)
+    end
+    local t = {n=G.UIT.ROOT, config={align = "cm", minw = 3, padding = 0.1, r = 0.1, colour = G.C.CLEAR}, nodes={
+      {n=G.UIT.R, config={align = "cm", padding = 0.04}, nodes=
+        hands
+      },
+    }}
+  
+    return t
+  end
+
+end
+
+function AllowStacking() end
+function AllowDividing() end
+function AllowMassUsing(set) Overflow.mass_use_sets[set] = true end
+function AllowBulkUse() end
+function Card:getQty()
+    if not self.ability.immutable then self.ability.immutable = {} end
+    return self.ability.immutable.overflow_amount or 1
+end
+function Card:setQty(q)
+    Overflow.set_amount(self, q)
+end
+function Card:set_stack_display()
+    self:create_overflow_ui()
 end

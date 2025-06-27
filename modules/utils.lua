@@ -24,7 +24,7 @@ function Overflow.can_merge(self, card, bypass, ignore_area)
     if self.dissolve or (card and card.dissolve) then return false end
     if Overflow.is_blacklisted(self) or Overflow.is_blacklisted(card) or (self.area ~= G.consumeables and not ignore_area) or self.config.center.set == "Joker" then return end
     if not card then
-        if Overflow.config.only_stack_negatives then
+        if Overflow.config.only_stack_negatives or (MP and MP.LOBBY and MP.LOBBY.code) then
             if not self.edition or not self.edition.negative then
                 return 
             else    
@@ -43,7 +43,7 @@ function Overflow.can_merge(self, card, bypass, ignore_area)
         end
     else
         if (card.area ~= G.consumeables and not ignore_area) or card.config.center.set == "Joker" then return end
-        if Overflow.config.only_stack_negatives then
+        if Overflow.config.only_stack_negatives or (MP and MP.LOBBY and MP.LOBBY.code) then
             if not self.edition or not self.edition.negative then
                 return 
             else 
@@ -102,7 +102,7 @@ end
 
 function Overflow.can_mass_use(set, area) 
     local total = 0
-    if area == G.pack_cards or area == G.shop_jokers or area == G.shop_booster or area == G.shop_vouchhers then return nil end
+    if area == G.pack_cards or area == G.shop_jokers or area == G.shop_booster or area == G.shop_vouchers then return nil end
     for i, v in pairs(area) do
         if v.config.center.set == set then total = total + 1 end
     end
@@ -137,7 +137,7 @@ function Overflow.table_merge(target, source, ...)
 end
 
 function Overflow.save_config() 
-    local serialized = "return { only_stack_negatives = "..tostring(Overflow.config.only_stack_negatives or false)..", fix_slots = "..tostring(Overflow.config.fix_slots or false).."}"
+    local serialized = "return { only_stack_negatives = "..tostring(Overflow.config.only_stack_negatives or false)..", fix_slots = "..tostring(Overflow.config.fix_slots or false)..", sorting_mode = "..tostring(Overflow.config.sorting_mode or 0).."}"
     love.filesystem.write("config/Overflow.lua", serialized)
 end
 
@@ -156,3 +156,227 @@ function Overflow.load_config()
     end
 end
 if not Overflow.config then Overflow.config = Overflow.load_config() end
+
+function Overflow.sort(hands, vanilla)
+    if Overflow.config.sorting_mode == 2 then
+        tbl = copy_table(hands)
+        levelled = {}
+        other = {}
+        for i, v in pairs(tbl) do if to_big(G.GAME.hands[v].level ) > to_big(1) then levelled[#levelled+1]=v else other[#other+1] = v end end
+        table.sort(levelled, function(a,b)
+            return to_big(G.GAME.hands[a].level) > to_big(G.GAME.hands[b].level)
+        end)
+        tbl = {}
+        if #levelled > 0 then
+            for i, v in pairs(levelled) do
+                tbl[#tbl+1] = levelled[i]
+            end
+        end
+        for i, v in pairs(other) do
+            if to_big(G.GAME.hands[v].level) <= to_big(1) then
+                tbl[#tbl+1] = other[i]
+            end
+        end
+        return tbl
+    end
+
+    if Overflow.config.sorting_mode == 3 then
+        tbl = copy_table(hands)
+        levelled = {}
+        other = {}
+        for i, v in pairs(tbl) do if to_big(G.GAME.hands[v].chips ) > to_big(0) then levelled[#levelled+1]=v else other[#other+1] = v end end
+        table.sort(levelled, function(a,b)
+            return to_big(G.GAME.hands[a].chips) > to_big(G.GAME.hands[b].chips)
+        end)
+        tbl = {}
+        if #levelled > 0 then
+            for i, v in pairs(levelled) do
+                tbl[#tbl+1] = levelled[i]
+            end
+        end
+        for i, v in pairs(other) do
+            if to_big(G.GAME.hands[v].chips) <= to_big(0) then
+                tbl[#tbl+1] = other[i]
+            end
+        end
+        return tbl
+    end
+
+    if Overflow.config.sorting_mode == 4 then
+        tbl = copy_table(hands)
+        levelled = {}
+        other = {}
+        for i, v in pairs(tbl) do if to_big(G.GAME.hands[v].mult ) > to_big(0) then levelled[#levelled+1]=v else other[#other+1] = v end end
+        table.sort(levelled, function(a,b)
+            return to_big(G.GAME.hands[a].mult) > to_big(G.GAME.hands[b].mult)
+        end)
+        tbl = {}
+        if #levelled > 0 then
+            for i, v in pairs(levelled) do
+                tbl[#tbl+1] = levelled[i]
+            end
+        end
+        for i, v in pairs(other) do
+            if to_big(G.GAME.hands[v].mult) <= to_big(0) then
+                tbl[#tbl+1] = other[i]
+            end
+        end
+        return tbl
+    end
+    
+    if Overflow.config.sorting_mode == 5 then
+        tbl = copy_table(hands)
+        levelled = {}
+        other = {}
+        for i, v in pairs(tbl) do if (to_big(G.GAME.hands[v].chips )*to_big(G.GAME.hands[v].mult )) > to_big(0) then levelled[#levelled+1]=v else other[#other+1] = v end end
+        table.sort(levelled, function(a,b)
+            return (to_big(G.GAME.hands[a].chips )*to_big(G.GAME.hands[a].mult )) > (to_big(G.GAME.hands[b].chips )*to_big(G.GAME.hands[b].mult ))
+        end)
+        tbl = {}
+        if #levelled > 0 then
+            for i, v in pairs(levelled) do
+                tbl[#tbl+1] = levelled[i]
+            end
+        end
+        for i, v in pairs(other) do
+            if (to_big(G.GAME.hands[v].chips )*to_big(G.GAME.hands[v].mult )) <= to_big(0) then
+                tbl[#tbl+1] = other[i]
+            end
+        end
+        return tbl
+    end
+
+    if Overflow.config.sorting_mode == 6 then
+        tbl = copy_table(hands)
+        levelled = {}
+        other = {}
+        for i, v in pairs(tbl) do if to_big(G.GAME.hands[v].played ) > to_big(0) then levelled[#levelled+1]=v else other[#other+1] = v end end
+        table.sort(levelled, function(a,b)
+            return to_big(G.GAME.hands[a].played) > to_big(G.GAME.hands[b].played)
+        end)
+        tbl = {}
+        if #levelled > 0 then
+            for i, v in pairs(levelled) do
+                tbl[#tbl+1] = levelled[i]
+            end
+        end
+        for i, v in pairs(other) do
+            if to_big(G.GAME.hands[v].played) <= to_big(0) then
+                tbl[#tbl+1] = other[i]
+            end
+        end
+        return tbl
+    end
+
+    if Overflow.config.sorting_mode == 7 then
+        tbl = copy_table(hands)
+        levelled = {}
+        other = {}
+        for i, v in pairs(tbl) do if to_big(G.GAME.hands[v].level ) > to_big(1) then levelled[#levelled+1]=v else other[#other+1] = v end end
+        table.sort(levelled, function(a,b)
+            return to_big(G.GAME.hands[a].level) < to_big(G.GAME.hands[b].level)
+        end)
+        tbl = {}
+        for i, v in pairs(other) do
+            if to_big(G.GAME.hands[v].level) <= to_big(1) then
+                tbl[#tbl+1] = other[i]
+            end
+        end
+        if #levelled > 0 then
+            for i, v in pairs(levelled) do
+                tbl[#tbl+1] = levelled[i]
+            end
+        end
+        return tbl
+    end
+
+    if Overflow.config.sorting_mode == 8 then
+        tbl = copy_table(hands)
+        levelled = {}
+        other = {}
+        for i, v in pairs(tbl) do if to_big(G.GAME.hands[v].chips ) > to_big(0) then levelled[#levelled+1]=v else other[#other+1] = v end end
+        table.sort(levelled, function(a,b)
+            return to_big(G.GAME.hands[a].chips) < to_big(G.GAME.hands[b].chips)
+        end)
+        tbl = {}
+        for i, v in pairs(other) do
+            if to_big(G.GAME.hands[v].chips) <= to_big(0) then
+                tbl[#tbl+1] = other[i]
+            end
+        end
+        if #levelled > 0 then
+            for i, v in pairs(levelled) do
+                tbl[#tbl+1] = levelled[i]
+            end
+        end
+        return tbl
+    end
+
+    if Overflow.config.sorting_mode == 9 then
+        tbl = copy_table(hands)
+        levelled = {}
+        other = {}
+        for i, v in pairs(tbl) do if to_big(G.GAME.hands[v].mult ) > to_big(0) then levelled[#levelled+1]=v else other[#other+1] = v end end
+        table.sort(levelled, function(a,b)
+            return to_big(G.GAME.hands[a].mult) < to_big(G.GAME.hands[b].mult)
+        end)
+        tbl = {}
+        for i, v in pairs(other) do
+            if to_big(G.GAME.hands[v].mult) <= to_big(0) then
+                tbl[#tbl+1] = other[i]
+            end
+        end
+        if #levelled > 0 then
+            for i, v in pairs(levelled) do
+                tbl[#tbl+1] = levelled[i]
+            end
+        end
+        return tbl
+    end
+
+    if Overflow.config.sorting_mode == 10 then
+        tbl = copy_table(hands)
+        levelled = {}
+        other = {}
+        for i, v in pairs(tbl) do if (to_big(G.GAME.hands[v].chips )*to_big(G.GAME.hands[v].mult )) > to_big(0) then levelled[#levelled+1]=v else other[#other+1] = v end end
+        table.sort(levelled, function(a,b)
+            return (to_big(G.GAME.hands[a].chips )*to_big(G.GAME.hands[a].mult )) < (to_big(G.GAME.hands[b].chips )*to_big(G.GAME.hands[b].mult ))
+        end)
+        tbl = {}
+        for i, v in pairs(other) do
+            if (to_big(G.GAME.hands[v].chips )*to_big(G.GAME.hands[v].mult )) <= to_big(0) then
+                tbl[#tbl+1] = other[i]
+            end
+        end
+        if #levelled > 0 then
+            for i, v in pairs(levelled) do
+                tbl[#tbl+1] = levelled[i]
+            end
+        end
+        return tbl
+    end
+
+    if Overflow.config.sorting_mode == 11 then
+        tbl = copy_table(hands)
+        levelled = {}
+        other = {}
+        for i, v in pairs(tbl) do if to_big(G.GAME.hands[v].played ) > to_big(0) then levelled[#levelled+1]=v else other[#other+1] = v end end
+        table.sort(levelled, function(a,b)
+            return to_big(G.GAME.hands[a].played) < to_big(G.GAME.hands[b].played)
+        end)
+        tbl = {}
+        for i, v in pairs(other) do
+            if to_big(G.GAME.hands[v].played) <= to_big(0) then
+                tbl[#tbl+1] = other[i]
+            end
+        end
+        if #levelled > 0 then
+            for i, v in pairs(levelled) do
+                tbl[#tbl+1] = levelled[i]
+            end
+        end
+        return tbl
+    end
+
+    return hands
+end
